@@ -12,7 +12,10 @@ app.use(cors());
 // Configure Multer to save uploaded files into an 'uploads' directory
 const uploadDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
-const upload = multer({ dest: uploadDir });
+// const upload = multer({ dest: uploadDir });
+const upload = multer({   dest: uploadDir,   limits: {     fieldSize: 25 * 1024 * 1024, 
+  fieldSize: 50 * 1024 * 1024, 
+  } });
 
 // In-memory registry to track uploaded files
 const fileRegistry = {};
@@ -40,23 +43,29 @@ app.use(
 // 1. WOPI CheckFileInfo Endpoint (Dynamic)
 app.get("/wopi/files/:id", (req, res) => {
   const fileData = fileRegistry[req.params.id];
+  console.log("fileData", fileData, res);
   if (!fileData || !fs.existsSync(fileData.path))
     return res.status(404).send("File not found");
 
-  const postMessageOrigin = req.query.origin || "http://localhost:8080";
+  const postMessageOrigin = "http://localhost:8080";
   const stat = fs.statSync(fileData.path);
   res.json({
     BaseFileName: fileData.name,
     Size: stat.size,
-    UserId: "siva-local",
+    fileData: fileData,
+    UserId: "thanaselvi-local",
     UserCanWrite: true,
     HideUserList: true,
-    DisablePrint: false,
+    DisablePrint: true,
     DisableExport: false,
-    HideSaveOption: true,
+    // HideSaveOption: true,
     DownloadAsPostMessage: true,
+    SaveAsPostmessage: true,
+    DisableWelcome: true,
+    DisableInactiveMessages: true,
     PostMessageOrigin: postMessageOrigin,
   });
+  // res.json();
 });
 
 // 2. WOPI GetFile Endpoint (Dynamic)
@@ -69,7 +78,7 @@ app.get("/wopi/files/:id/contents", (req, res) => {
 app.post("/wopi/files/:id/contents", (req, res) => {
   const fileData = fileRegistry[req.params.id];
   fs.writeFileSync(fileData.path, req.body);
-  console.log(`File ${fileData.name} saved successfully!`);
+  console.log(`File ${fileData.name} saved successfully11!`);
   res.sendStatus(200);
 });
 
