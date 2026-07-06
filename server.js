@@ -47,7 +47,7 @@ app.get("/wopi/files/:id", (req, res) => {
   if (!fileData || !fs.existsSync(fileData.path))
     return res.status(404).send("File not found");
 
-  const postMessageOrigin = "http://localhost:8080";
+  const postMessageOrigin = "https://trial.ezofis.com";
   const stat = fs.statSync(fileData.path);
   res.json({
     BaseFileName: fileData.name,
