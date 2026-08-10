@@ -389,7 +389,7 @@ app.get("/wopi/files/:id", (req, res) => {
     DisableExport: false,
     HideSaveOption: false,
     DisableInactiveMessages: true,
-    PostMessageOrigin: *,
+    PostMessageOrigin: "*",,
   });
 });
 
