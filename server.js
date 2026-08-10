@@ -31,7 +31,7 @@ app.use(cors());
 
 const PORT = 5000;
 const COLLABORA_URL = process.env.COLLABORA_URL || "http://localhost:9980";
-const POST_MESSAGE_ORIGIN = process.env.APP_ORIGIN || "http://localhost:8080";
+const POST_MESSAGE_ORIGIN = process.env.APP_ORIGIN || "http://localhost:8080" || "https://collabora-2wf8.onrender.com" ||"http://localhost:3000" || "https://demoapp.ezofis.com" || "https://v6app.ezofis.com";
 const CONVERT_TIMEOUT_MS = 180_000;   // big/scanned PDFs are slow
 const SAVE_DEBOUNCE_MS = 2_000;       // collapse rapid autosaves into one convert
 
