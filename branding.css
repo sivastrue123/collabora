@@ -1,35 +1,74 @@
-/* -------------------------------------------
-   1. SPLASH SCREEN BRANDING REMOVAL
-------------------------------------------- */
-/* Hide the "Collabora Online Development Edition (CODE)" text */
-.leaflet-progress-label.brand-label {
-    display: none !important;
-}
-
-/* Hide the spinning canvas logo above the text */
-.leaflet-progress-spinner {
-    display: none !important;
-}
-
-/* -------------------------------------------
-   2. TOP-LEFT EDITOR LOGO REMOVAL
-------------------------------------------- */
-/* Target the exact anchor tag in the document header */
+/* 1. SPLASH SCREEN BRANDING REMOVAL */
+.leaflet-progress-label.brand-label { display: none !important; }
+.leaflet-progress-spinner { display: none !important; }
+/* 2. TOP-LEFT EDITOR LOGO REMOVAL */
 #document-header #document-logo,
 a.document-logo {
-    display: none !important;
-    width: 0 !important;
-    height: 0 !important;
-    background-image: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    pointer-events: none !important;
+display: none !important;
+width: 0 !important;
+height: 0 !important;
+background-image: none !important;
+pointer-events: none !important;
 }
-#viewMode,
-#viewModeDropdown,
-#readonlyMode {
+
+/* .document-title {
+    display: none !important;
+}
+
+#document-name-input {
+    display: none !important; 
+} */
+
+.iframe-welcome-wrap, .iframe-welcome-content {
+    display: none !important;
+    background: none !important;
+    background-color: none !important;
+}
+
+iframe.iframe-welcome-modal {
+    display: none !important;
+}
+
+/* #menu-file, #menu-help, #menu-insert, #menu-editmenu, #menu-view {
     display: none !important;
     visibility: hidden !important;
-    width: 0 !important;
-    pointer-events: none !important;
+    opacity: 0 !important;  
+} */
+
+/* #File-tab-label {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important; 
+}
+
+html nav.main-nav.readonly {
+  display: none !important;
+  visibility: hidden !important;
+  border-bottom: none !important;
+}
+
+html button.ui-tab.notebookbar#File-tab-label {
+  display: none !important;
+    visibility: hidden !important;
+} */
+
+/* #document-title {
+   display: none !important; 
+} */
+/* 3. HIDE NATIVE EDITING/VIEWING DROPDOWN */
+#viewMode,
+#viewModeDropdown,
+#readonlyMode,
+#viewModeDropdownButton,
+.viewModeDropdown,
+.viewModeDropdownButton,
+button[aria-label="Editing"] {
+display: none !important;
+visibility: hidden !important;
+opacity: 0 !important;
+width: 0 !important;
+height: 0 !important;
+position: absolute !important;
+pointer-events: none !important;
+z-index: -9999 !important;
 }
