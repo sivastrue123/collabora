@@ -29,7 +29,7 @@ app.use(cors());
 
 // ---------------------------------------------------------------- config
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 const COLLABORA_URL = process.env.COLLABORA_URL ||  "https://ez-officeviewer-app.graycoast-78e47e4a.southindia.azurecontainerapps.io" ||"http://localhost:9980" ||   "https://ez-officeviewer-wopi.azurewebsites.net";
 const POST_MESSAGE_ORIGIN = process.env.APP_ORIGIN || "https://trial.ezofis.com" || "http://localhost:8080" ||"http://localhost:3000" || "https://demoapp.ezofis.com" || "https://v6app.ezofis.com";
 const CONVERT_TIMEOUT_MS = 180_000;   // big/scanned PDFs are slow
@@ -292,7 +292,7 @@ app.post("/upload", upload.single("document"), async (req, res) => {
   registry.recordVersion(entry, 1, entry.originalPath);
 
   try {
-    const odg = await registry.withLock(entry, () => convert(entry.originalPath, "odg"));
+    const odg = await registry.withLock(entry, () => convert(entry.originalPath, "odg:draw_pdf_import");
     await fsp.writeFile(entry.editPath, odg);
 
     console.log(`[upload] ${entry.id} converted to ODG (${odg.length} bytes)`);
@@ -534,37 +534,37 @@ async function checkCollabora() {
   }
 }
 
-app.get("/test-convert", async (req, res) => {
-  try {
-    const buf = await convert("C:\\Users\\Shiva\\test\\sample.pdf", "odg");
-    await require("fs/promises").writeFile("C:\\Users\\Shiva\\test\\out.odg", buf);
-    res.send(`OK - ${buf.length} bytes`);
-  } catch (err) {
-    res.status(500).send(err.message);
-  }
-});
+// app.get("/test-convert", async (req, res) => {
+//   try {
+//     const buf = await convert("C:\\Users\\Shiva\\test\\sample.pdf", "odg");
+//     await require("fs/promises").writeFile("C:\\Users\\Shiva\\test\\out.odg", buf);
+//     res.send(`OK - ${buf.length} bytes`);
+//   } catch (err) {
+//     res.status(500).send(err.message);
+//   }
+// });
 
 const registry = require("./lib/registry");
 
-app.get("/test-registry", async (req, res) => {
-  const entry = registry.create({ originalName: "invoice.pdf", kind: "pdf-derived" });
+// app.get("/test-registry", async (req, res) => {
+//   const entry = registry.create({ originalName: "invoice.pdf", kind: "pdf-derived" });
 
-  const order = [];
-  const slow = (n, ms) => registry.withLock(entry, () =>
-    new Promise((r) => setTimeout(() => { order.push(n); r(); }, ms))
-  );
+//   const order = [];
+//   const slow = (n, ms) => registry.withLock(entry, () =>
+//     new Promise((r) => setTimeout(() => { order.push(n); r(); }, ms))
+//   );
 
-  await Promise.all([slow("first", 300), slow("second", 50), slow("third", 10)]);
+//   await Promise.all([slow("first", 300), slow("second", 50), slow("third", 10)]);
 
-  res.json({
-    editName: entry.editName,
-    editPath: entry.editPath,
-    originalPath: entry.originalPath,
-    lockOrder: order,
+//   res.json({
+//     editName: entry.editName,
+//     editPath: entry.editPath,
+//     originalPath: entry.originalPath,
+//     lockOrder: order,
+//   });
+// });
+app.get("/health", (_req, res) => res.send("ok"));
+app.listen(PORT, "0.0.0.0", async () => {
+    console.log(`WOPI host running on port ${PORT}`);
+    await checkCollabora();
   });
-});
-
-app.listen(PORT, async () => {
-  console.log(`WOPI host running on http://localhost:${PORT}`);
-  await checkCollabora();
-});
