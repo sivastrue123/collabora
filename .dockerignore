@@ -1,0 +1,7 @@
+node_modules
+.git
+storage
+uploads
+certs
+*.log
+sample.docx
