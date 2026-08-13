@@ -292,7 +292,7 @@ app.post("/upload", upload.single("document"), async (req, res) => {
   registry.recordVersion(entry, 1, entry.originalPath);
 
   try {
-    const odg = await registry.withLock(entry, () => convert(entry.originalPath, "odg:draw_pdf_import"));
+   const odg = await registry.withLock(entry, () => convert(entry.originalPath, "odg:draw8"));
     await fsp.writeFile(entry.editPath, odg);
 
     console.log(`[upload] ${entry.id} converted to ODG (${odg.length} bytes)`);
