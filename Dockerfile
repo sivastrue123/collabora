@@ -1,13 +1,10 @@
-FROM node:18-alpine
-
+FROM node:20-bookworm-slim
+RUN apt-get update && apt-get install -y \
+    libreoffice-core libreoffice-draw libreoffice-writer \
+    fonts-dejavu fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /usr/src/app
-
 COPY package*.json ./
-
-RUN npm install --production
-
+RUN npm ci --omit=dev
 COPY . .
-
-EXPOSE 5000
-
-CMD [ "node", "server.js" ]
+CMD ["node", "server.js"]
