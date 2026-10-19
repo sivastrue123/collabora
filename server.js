@@ -397,8 +397,6 @@ app.get("/wopi/files/:id", (req, res) => {
 app.get("/wopi/files/:id/contents", (req, res) => {
   const entry = requireFile(req, res);
   if (!entry) return;
-  // Never let a browser/proxy serve a stale copy of the edited file.
-  res.set("Cache-Control", "no-store");
   res.sendFile(entry.editPath);
 });
 
@@ -418,10 +416,7 @@ app.post("/wopi/files/:id/contents", async (req, res) => {
     await registry.withLock(entry, () => fsp.writeFile(entry.editPath, req.body));
     console.log(`[wopi] ${entry.id} saved ${entry.editName} (${req.body.length} bytes)`);
  
-    if (entry.kind === "pdf-derived") {
-      entry.dirty = true;
-      scheduleRegeneration(entry);
-    }
+    if (entry.kind === "pdf-derived") entry.dirty = true ; scheduleRegeneration(entry);
  
     res.sendStatus(200);
   } catch (err) {
@@ -484,23 +479,42 @@ app.get("/files/:id/versions", (req, res) => {
 
 // Poll this after a save to know when the PDF is ready.
 app.get("/files/:id/status", (req, res) => {
-  const entry = registry.get(req.params.id);
-  if (!entry) return res.status(404).json({ error: "Unknown file" });
+  const file = fileRegistry[req.params.id];
+  if (!file) return res.status(404).json({ error: "Unknown file" });
 
   res.json({
-    kind: entry.kind,
-    dirty: !!entry.dirty,
-    converting: !!entry.converting,
-    updatedAt: entry.updatedAt || null,
-    error: entry.lastError || null,
+    kind: file.kind,
+    dirty: !!file.dirty,
+    converting: !!file.converting,
+    updatedAt: file.updatedAt || null,
+    error: file.lastError || null,
   });
+});
+
+// Download the current PDF. Forces a conversion first if edits are pending.
+app.get("/files/:id/pdf", async (req, res) => {
+  const file = fileRegistry[req.params.id];
+  if (!file) return res.status(404).send("Unknown file");
+  if (file.kind !== "pdf-derived") return res.status(400).send("Not a PDF-derived file");
+
+  if (file.dirty || file.converting) {
+    clearTimeout(saveTimers.get(req.params.id));
+    saveTimers.delete(req.params.id);
+    await regeneratePdf(req.params.id);
+  }
+
+  if (file.lastError) {
+    return res.status(502).json({ error: "Conversion failed", detail: file.lastError });
+  }
+
+  res.download(file.outputPath, file.originalName);
 });
 
 // The untouched upload, for version history / rollback.
 app.get("/files/:id/original", (req, res) => {
-  const entry = registry.get(req.params.id);
-  if (!entry) return res.status(404).send("Unknown file");
-  res.download(entry.originalPath, entry.originalName);
+  const file = fileRegistry[req.params.id];
+  if (!file) return res.status(404).send("Unknown file");
+  res.download(file.originalPath, file.originalName);
 });
 
 // ---------------------------------------------------------------- boot
