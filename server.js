@@ -29,9 +29,9 @@ app.use(cors());
 
 // ---------------------------------------------------------------- config
 
-const PORT = process.env.PORT || 5000;
-const COLLABORA_URL = process.env.COLLABORA_URL ||  "https://ez-officeviewer-app.graycoast-78e47e4a.southindia.azurecontainerapps.io" ||"http://localhost:9980" ||   "https://ez-officeviewer-wopi.azurewebsites.net";
-const POST_MESSAGE_ORIGIN = process.env.APP_ORIGIN || "https://trial.ezofis.com" || "http://localhost:8080" ||"http://localhost:3000" || "https://demoapp.ezofis.com" || "https://v6app.ezofis.com";
+const PORT = 5000;
+const COLLABORA_URL = process.env.COLLABORA_URL || "http://localhost:9980";
+const POST_MESSAGE_ORIGIN = process.env.APP_ORIGIN || "http://localhost:8080";
 const CONVERT_TIMEOUT_MS = 180_000;   // big/scanned PDFs are slow
 const SAVE_DEBOUNCE_MS = 2_000;       // collapse rapid autosaves into one convert
 
@@ -292,7 +292,7 @@ app.post("/upload", upload.single("document"), async (req, res) => {
   registry.recordVersion(entry, 1, entry.originalPath);
 
   try {
-   const odg = await registry.withLock(entry, () => convert(entry.originalPath, "odg:draw8"));
+    const odg = await registry.withLock(entry, () => convert(entry.originalPath, "odg"));
     await fsp.writeFile(entry.editPath, odg);
 
     console.log(`[upload] ${entry.id} converted to ODG (${odg.length} bytes)`);
@@ -389,7 +389,7 @@ app.get("/wopi/files/:id", (req, res) => {
     DisableExport: false,
     HideSaveOption: false,
     DisableInactiveMessages: true,
-    PostMessageOrigin: "*",
+    PostMessageOrigin: process.env.APP_ORIGIN || "http://localhost:8080",
   });
 });
 
@@ -397,6 +397,8 @@ app.get("/wopi/files/:id", (req, res) => {
 app.get("/wopi/files/:id/contents", (req, res) => {
   const entry = requireFile(req, res);
   if (!entry) return;
+  // Never let a browser/proxy serve a stale copy of the edited file.
+  res.set("Cache-Control", "no-store");
   res.sendFile(entry.editPath);
 });
 
@@ -416,7 +418,10 @@ app.post("/wopi/files/:id/contents", async (req, res) => {
     await registry.withLock(entry, () => fsp.writeFile(entry.editPath, req.body));
     console.log(`[wopi] ${entry.id} saved ${entry.editName} (${req.body.length} bytes)`);
  
-    if (entry.kind === "pdf-derived") entry.dirty = true ; scheduleRegeneration(entry);
+    if (entry.kind === "pdf-derived") {
+      entry.dirty = true;
+      scheduleRegeneration(entry);
+    }
  
     res.sendStatus(200);
   } catch (err) {
@@ -479,42 +484,23 @@ app.get("/files/:id/versions", (req, res) => {
 
 // Poll this after a save to know when the PDF is ready.
 app.get("/files/:id/status", (req, res) => {
-  const file = fileRegistry[req.params.id];
-  if (!file) return res.status(404).json({ error: "Unknown file" });
+  const entry = registry.get(req.params.id);
+  if (!entry) return res.status(404).json({ error: "Unknown file" });
 
   res.json({
-    kind: file.kind,
-    dirty: !!file.dirty,
-    converting: !!file.converting,
-    updatedAt: file.updatedAt || null,
-    error: file.lastError || null,
+    kind: entry.kind,
+    dirty: !!entry.dirty,
+    converting: !!entry.converting,
+    updatedAt: entry.updatedAt || null,
+    error: entry.lastError || null,
   });
-});
-
-// Download the current PDF. Forces a conversion first if edits are pending.
-app.get("/files/:id/pdf", async (req, res) => {
-  const file = fileRegistry[req.params.id];
-  if (!file) return res.status(404).send("Unknown file");
-  if (file.kind !== "pdf-derived") return res.status(400).send("Not a PDF-derived file");
-
-  if (file.dirty || file.converting) {
-    clearTimeout(saveTimers.get(req.params.id));
-    saveTimers.delete(req.params.id);
-    await regeneratePdf(req.params.id);
-  }
-
-  if (file.lastError) {
-    return res.status(502).json({ error: "Conversion failed", detail: file.lastError });
-  }
-
-  res.download(file.outputPath, file.originalName);
 });
 
 // The untouched upload, for version history / rollback.
 app.get("/files/:id/original", (req, res) => {
-  const file = fileRegistry[req.params.id];
-  if (!file) return res.status(404).send("Unknown file");
-  res.download(file.originalPath, file.originalName);
+  const entry = registry.get(req.params.id);
+  if (!entry) return res.status(404).send("Unknown file");
+  res.download(entry.originalPath, entry.originalName);
 });
 
 // ---------------------------------------------------------------- boot
@@ -534,37 +520,37 @@ async function checkCollabora() {
   }
 }
 
-// app.get("/test-convert", async (req, res) => {
-//   try {
-//     const buf = await convert("C:\\Users\\Shiva\\test\\sample.pdf", "odg");
-//     await require("fs/promises").writeFile("C:\\Users\\Shiva\\test\\out.odg", buf);
-//     res.send(`OK - ${buf.length} bytes`);
-//   } catch (err) {
-//     res.status(500).send(err.message);
-//   }
-// });
+app.get("/test-convert", async (req, res) => {
+  try {
+    const buf = await convert("C:\\Users\\Shiva\\test\\sample.pdf", "odg");
+    await require("fs/promises").writeFile("C:\\Users\\Shiva\\test\\out.odg", buf);
+    res.send(`OK - ${buf.length} bytes`);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
 
 const registry = require("./lib/registry");
 
-// app.get("/test-registry", async (req, res) => {
-//   const entry = registry.create({ originalName: "invoice.pdf", kind: "pdf-derived" });
+app.get("/test-registry", async (req, res) => {
+  const entry = registry.create({ originalName: "invoice.pdf", kind: "pdf-derived" });
 
-//   const order = [];
-//   const slow = (n, ms) => registry.withLock(entry, () =>
-//     new Promise((r) => setTimeout(() => { order.push(n); r(); }, ms))
-//   );
+  const order = [];
+  const slow = (n, ms) => registry.withLock(entry, () =>
+    new Promise((r) => setTimeout(() => { order.push(n); r(); }, ms))
+  );
 
-//   await Promise.all([slow("first", 300), slow("second", 50), slow("third", 10)]);
+  await Promise.all([slow("first", 300), slow("second", 50), slow("third", 10)]);
 
-//   res.json({
-//     editName: entry.editName,
-//     editPath: entry.editPath,
-//     originalPath: entry.originalPath,
-//     lockOrder: order,
-//   });
-// });
-app.get("/health", (_req, res) => res.send("ok"));
-app.listen(PORT, "0.0.0.0", async () => {
-    console.log(`WOPI host running on port ${PORT}`);
-    await checkCollabora();
+  res.json({
+    editName: entry.editName,
+    editPath: entry.editPath,
+    originalPath: entry.originalPath,
+    lockOrder: order,
   });
+});
+
+app.listen(PORT, async () => {
+  console.log(`WOPI host running on http://localhost:${PORT}`);
+  await checkCollabora();
+});
