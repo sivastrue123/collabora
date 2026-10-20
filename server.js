@@ -388,8 +388,9 @@ app.get("/wopi/files/:id", (req, res) => {
     DisablePrint: true,
     DisableExport: false,
     HideSaveOption: false,
+    DisableWelcome: true,
     DisableInactiveMessages: true,
-    PostMessageOrigin: process.env.APP_ORIGIN || "http://localhost:8080",
+    PostMessageOrigin: "*",
   });
 });
 
@@ -564,7 +565,6 @@ app.get("/test-registry", async (req, res) => {
   });
 });
 
-app.listen(PORT, async () => {
-  console.log(`WOPI host running on http://localhost:${PORT}`);
-  await checkCollabora();
-});
+app.listen(5000, () =>
+  console.log("Local WOPI Host running on http://localhost:5000"),
+);
